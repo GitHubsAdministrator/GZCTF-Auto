@@ -1,3 +1,8 @@
+# 项目原作者 [MoRan](https://github.com/MoRan23) 已停止更新，本仓库对原本的脚本略作修改
+
+
+---
+
 # GZCTF-Auto
   
 ## GZCTF
@@ -14,7 +19,7 @@ GZCTF 一键部署
 测试环境：ubuntu 22.04 全新机  
 使用方式：  
 ```
-wget -O install.sh https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/install.sh && chmod +x install.sh && ./install.sh
+wget -O install.sh https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/install.sh && chmod +x install.sh && ./install.sh
 ```
 ## 更新计划
 |功能|状态|
