@@ -1,23 +1,52 @@
 #!/bin/bash
+stty erase '^H'
+check(){
+    if [ $(id -u) != "0" ]; then
+        echo "请使用root用户执行此脚本！"
+        exit 1
+    fi
+    if ! command -v docker &> /dev/null
+    then
+        green_echo "Docker-ce 未安装."
+        curl -fsSL http://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | sudo apt-key add -
+        sudo add-apt-repository -y "deb [arch=amd64] http://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable"
+        sudo apt-get -y update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install docker-ce docker-compose-plugin
+    else
+        if ! dpkg -l | grep docker-ce &> /dev/null
+        then
+            green_echo "重装 Docker-ce."
+            sudo apt-get remove -y docker.io
+            curl -fsSL http://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | sudo apt-key add -
+            sudo add-apt-repository -y "deb [arch=amd64] http://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable"
+            sudo apt-get -y update
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install docker-ce docker-compose-plugin
+        else
+            green_echo "Docker-ce 已安装."
+            if ! dpkg -l | grep docker-compose-plugin &> /dev/null
+            then
+                green_echo "安装 Docker-compose."
+                sudo DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install docker-compose-plugin
+            else
+                green_echo "Docker-compose 已安装."
+            fi
+        fi
+    fi
+}
 
 start(){
-    hostnamectl set-hostname k3s-master
     sudo apt-get -y update
     sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
     sudo DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install apt-transport-https ca-certificates curl software-properties-common dnsutils debian-keyring debian-archive-keyring
-    curl -fsSL http://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | sudo apt-key add -
-    sudo add-apt-repository -y "deb [arch=amd64] http://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable"
-    sudo apt-get -y update
-    sudo DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install docker-ce docker-compose-plugin
-    mkdir config-auto config-auto/agent config-auto/docker config-auto/gz config-auto/k3s config-auto/caddy
-    wget -O config-auto/agent/agent-temp.sh https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/config-auto/agent/agent-temp.sh
-    wget -O config-auto/agent/add-agent.sh https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/config-auto/agent/add-agent.sh
-    wget -O config-auto/docker/daemon.json https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/config-auto/docker/daemon.json
-    wget -O config-auto/gz/appsettings.json https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/config-auto/gz/appsettings.json
-    wget -O config-auto/gz/docker-compose.yaml https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/config-auto/gz/docker-compose.yaml
-    wget -O config-auto/k3s/kubelet.config https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/config-auto/k3s/kubelet.config
-    wget -O config-auto/k3s/registries.yaml https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/config-auto/k3s/registries.yaml
-    wget -O config-auto/caddy/Caddyfile https://cdn.moran233.xyz/https://raw.githubusercontent.com/MoRan23/GZCTF-Auto/main/config-auto/caddy/Caddyfile
+    mkdir -p config-auto config-auto/agent config-auto/docker config-auto/gz config-auto/k3s config-auto/caddy
+    wget --no-check-certificate -O config-auto/agent/agent-temp.sh https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/config-auto/agent/agent-temp.sh
+    wget --no-check-certificate -O config-auto/agent/add-agent.sh https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/config-auto/agent/add-agent.sh
+    wget --no-check-certificate -O config-auto/docker/daemon.json https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/config-auto/docker/daemon.json
+    wget --no-check-certificate -O config-auto/gz/appsettings.json https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/config-auto/gz/appsettings.json
+    wget --no-check-certificate -O config-auto/gz/docker-compose.yaml https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/config-auto/gz/docker-compose.yaml
+    wget --no-check-certificate -O config-auto/k3s/kubelet.config https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/config-auto/k3s/kubelet.config
+    wget --no-check-certificate -O config-auto/k3s/registries.yaml https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/config-auto/k3s/registries.yaml
+    wget --no-check-certificate -O config-auto/caddy/Caddyfile https://cdn.moran233.xyz/https://raw.githubusercontent.com/GitHubsAdministrator/GZCTF-Auto/main/config-auto/caddy/Caddyfile
     sudo kill -9 $(sudo lsof -t -i:80)
 }
 
@@ -30,14 +59,14 @@ change_Source(){
     minor=$(echo "$VERSION_ID" | cut -d '.' -f 2)
     if [ "$major" -lt 24 ] || { [ "$major" -eq 24 ] && [ "$minor" -lt 4 ]; }; then
         sudo sed -i 's@//.*archive.ubuntu.com@//mirrors.ustc.edu.cn@g' /etc/apt/sources.list
-        echo "换源成功！"
+        green_echo "换源成功！"
     else
         sudo sed -i 's@//.*archive.ubuntu.com@//mirrors.ustc.edu.cn@g' /etc/apt/sources.list.d/ubuntu.sources
-        echo "换源成功！"
+        green_echo "换源成功！"
     fi
     else
-        echo "/etc/os-release 文件不存在，无法确定系统版本信息。"
-        echo "换源失败，请手动换源！"
+        red_echo "/etc/os-release 文件不存在，无法确定系统版本信息。"
+        red_echo "换源失败，请手动换源！"
     fi
 }
 
@@ -100,6 +129,13 @@ set_port(){
     done
 }
 
+red_echo() {
+    echo -e "\e[91m$1\e[0m"
+}
+
+green_echo() {
+    echo -e "\e[92m$1\e[0m"
+}
 
 echo "=========================================================="
 echo "||                                                      ||"
@@ -134,6 +170,7 @@ done
 
 echo "正在执行初始化，请稍后..."
 start
+check
 echo "初始化成功！请继续配置"
 
 echo "请选择部署网络环境："
@@ -151,7 +188,7 @@ while true; do
             ;;
         2)
             echo "选择公网部署..."
-            public_ip=$(curl -s https://api.ipify.org)
+            public_ip=$(curl ipv4.ip.sb)
             IP_ADDR=$(hostname -I | awk '{print $1}')
             if [[ $IP_ADDR =~ ^10\. ]] || [[ $IP_ADDR =~ ^192\.168\. ]] || [[ $IP_ADDR =~ ^172\.1[6-9]\. ]] || [[ $IP_ADDR =~ ^172\.2[0-9]\. ]] || [[ $IP_ADDR =~ ^172\.3[0-1]\. ]]; then
                 echo "主机在 VPC 网络中..."
@@ -184,11 +221,12 @@ while true; do
             ;;
         2)
             echo "选择docker+k3s部署..."
+            hostnamectl set-hostname k3s-master
             sed -i "s|SETUPTYPE|Kubernetes|g" ./config-auto/gz/appsettings.json
             sed -i "s|#K3S|,\"KubernetesConfig\": {\"Namespace\": \"gzctf-challenges\",\"ConfigPath\": \"kube-config.yaml\",\"AllowCIDR\": [\"10.0.0.0/8\"],\"DNS\": [\"8.8.8.8\",\"223.5.5.5\"]}|g" ./config-auto/gz/appsettings.json
             sed -i "s|# - \"./kube-config.yaml:/app/kube-config.yaml:ro\"|- \"./kube-config.yaml:/app/kube-config.yaml:ro\"|g" ./config-auto/gz/docker-compose.yaml
             while true; do
-                read -p "请输入k3s节点机器数量（本机除外）： " hostNum
+                read -p "请输入k3s节点机器数量（本机除外, 单机部署填 0 ）： " hostNum
                 if [ -z "$hostNum" ]; then
                     echo "输入为空，请重新输入。"
                 elif ! echo "$hostNum" | grep -qE '^[0-9]+$'; then
@@ -199,7 +237,7 @@ while true; do
                     for i in $(seq 1 $hostNum); do
                         while true; do
                             read -p "请输入k3s节点 $i 的ip地址（将会影响自动连接脚本）： " hostIP
-                            echo "请确认k3s节点 1 的ip地址（必须无错误，否则会出现连接不上的情况）：$hostIP "
+                            echo "请确认k3s节点 $i 的ip地址（必须无错误，否则会出现连接不上的情况）：$hostIP "
                             echo "1) 确认"
                             echo "2) 重新输入"
                             read -p "是否确认？: " confirm
@@ -242,12 +280,12 @@ while true; do
             read -p "输入镜像源（默认内置源）: " source_add
 
             if [ -z "$source_add" ]; then
-                source_add="https://hub.hk1.dkdun.com/"
+                source_add="https://docker.1panel.live/"
             fi
             echo "使用的镜像源是: $source_add"
             sed -i "s|\[\"[^\"]*\"\]|\[\"$source_add\"\]|g" ./config-auto/docker/daemon.json
-            sed -i "s|https://hub.hk1.dkdun.com/|$source_add|g" ./config-auto/agent/agent-temp.sh
-            sed -i "s|https://hub.hk1.dkdun.com/|$source_add|g" ./config-auto/k3s/registries.yaml
+            sed -i "s|https://docker.1panel.live/|$source_add|g" ./config-auto/agent/agent-temp.sh
+            sed -i "s|https://docker.1panel.live/|$source_add|g" ./config-auto/k3s/registries.yaml
             break
             ;;
         2)
@@ -261,6 +299,9 @@ while true; do
             ;;
     esac
 done
+
+systemctl daemon-reload
+systemctl restart docker
 
 echo "请选择是否开启流量代理："
 echo "1) 是"
@@ -329,6 +370,7 @@ if [ "$net" -eq 2 ]; then
                     sed -i "s|DOMAIN|$domain|g" ./config-auto/caddy/Caddyfile
                     sed -i "s|SERVER|$public_ip|g" ./config-auto/agent/agent-temp.sh
                     sed -i "s|PORT|81|g" ./config-auto/caddy/Caddyfile
+                    sed -i "s|PORT|81|g" ./config-auto/gz/docker-compose.yaml
                     break
                 else
                     echo "域名 $domain 解析的 IP ($domain_ip) 不是本机的公网 IP ($public_ip)"
@@ -366,35 +408,54 @@ while true; do
     fi
 done
 
-echo "开始部署..."
+green_echo "开始部署..."
 
 systemctl disable --now ufw && systemctl disable --now iptables
 mv ./config-auto/docker/daemon.json /etc/docker/
 sudo systemctl daemon-reload && sudo systemctl restart docker
 
 if [ "$setup" -eq 1 ]; then
-    mkdir GZCTF
+    mkdir -p GZCTF
     mv ./config-auto/gz/appsettings.json ./GZCTF/
     mv ./config-auto/gz/docker-compose.yaml ./GZCTF/
 else
     if [ "$net" -eq 2 ]; then
         if [ "$VPC" -eq 1 ]; then
-            curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_EXEC="--kube-controller-manager-arg=node-cidr-mask-size=16" INSTALL_K3S_EXEC="--docker" INSTALL_K3S_MIRROR=cn sh -s - --node-external-ip="$public_ip" --flannel-backend=wireguard-native --flannel-external-ip
+            curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_EXEC="--kube-controller-manager-arg=node-cidr-mask-size=16" INSTALL_K3S_EXEC="--docker" INSTALL_K3S_MIRROR=cn sh -s - --node-external-ip="$public_ip" --flannel-backend=wireguard-native --flannel-external-ip --disable=traefik --kube-apiserver-arg=service-node-port-range=20000-50000 --kubelet-arg=config=/etc/rancher/k3s/kubelet.config
+            if ! command -v kubectl &> /dev/null
+            then
+                red_echo "k3s 安装失败."
+                exit 1
+            else
+                green_echo "k3s 安装成功."
+            fi
             sed -i "s|sh -|sh -s - --node-external-ip=PUBLIC_IP|g" config-auto/agent/agent-temp.sh
         else
-            curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_EXEC="--kube-controller-manager-arg=node-cidr-mask-size=16" INSTALL_K3S_EXEC="--docker" INSTALL_K3S_MIRROR=cn sh -
+            curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_EXEC="--kube-controller-manager-arg=node-cidr-mask-size=16" INSTALL_K3S_EXEC="--docker" INSTALL_K3S_MIRROR=cn sh -s - --disable=traefik --kube-apiserver-arg=service-node-port-range=20000-50000 --kubelet-arg=config=/etc/rancher/k3s/kubelet.config
+            if ! command -v kubectl &> /dev/null
+            then
+                red_echo "k3s 安装失败."
+                exit 1
+            else
+                green_echo "k3s 安装成功."
+            fi
         fi
     else
-        curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_EXEC="--kube-controller-manager-arg=node-cidr-mask-size=16" INSTALL_K3S_EXEC="--docker" INSTALL_K3S_MIRROR=cn sh -
+        curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_EXEC="--kube-controller-manager-arg=node-cidr-mask-size=16" INSTALL_K3S_EXEC="--docker" INSTALL_K3S_MIRROR=cn sh -s - --disable=traefik --kube-apiserver-arg=service-node-port-range=20000-50000 --kubelet-arg=config=/etc/rancher/k3s/kubelet.config
+        if ! command -v kubectl &> /dev/null
+        then
+            red_echo "k3s 安装失败."
+            exit 1
+        else
+            green_echo "k3s 安装成功."
+        fi
     fi
     token=$(sudo cat /var/lib/rancher/k3s/server/token)
     sed -i "s|mynodetoken|$token|g" ./config-auto/agent/agent-temp.sh
-    sed -i '${/^$/d}' /etc/systemd/system/k3s.service
-    echo -e "        '--disable=traefik' \\\\\\n        '--kube-apiserver-arg=service-node-port-range=20000-50000' \\\\\\n        '--kubelet-arg=config=/etc/rancher/k3s/kubelet.config' \\\\\\n" >> /etc/systemd/system/k3s.service
     mv ./config-auto/k3s/kubelet.config /etc/rancher/k3s/
     mv ./config-auto/k3s/registries.yaml /etc/rancher/k3s/
     sudo systemctl daemon-reload && sudo systemctl restart k3s
-    mkdir GZCTF
+    mkdir -p GZCTF
     sudo cat /etc/rancher/k3s/k3s.yaml > ./GZCTF/kube-config.yaml
     if [ "$net" -eq 2 ]; then
         sed -i "s|127.0.0.1|$public_ip|g" ./GZCTF/kube-config.yaml
@@ -407,7 +468,7 @@ else
     fi
     mv ./config-auto/gz/appsettings.json ./GZCTF/
     mv ./config-auto/gz/docker-compose.yaml ./GZCTF/
-    mkdir k3s-agent
+    mkdir -p k3s-agent
     cp ./config-auto/agent/agent-temp.sh k3s-agent/agent-temp
     mv ./config-auto/agent/add-agent.sh k3s-agent/add-agent.sh
     for i in $(seq 1 $hostNum); do
@@ -419,17 +480,37 @@ fi
 
 if [ "$net" -eq 2 ]; then
     if [ "$select" -eq 1 ]; then
-        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-        sudo apt-get -y update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install caddy
+        if ! command -v caddy &> /dev/null
+        then
+            echo "caddy 未安装，执行安装."
+            curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+            curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+            sudo apt-get -y update
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install caddy
+        else
+            green_echo "caddy 已安装，跳过安装."
+        fi
 
-        mkdir caddy
-        mv ./config-auto/caddy/Caddyfile ./caddy/
-        
-        cd caddy
-        nohup caddy run > caddy.log 2>&1 &
-        cd ../
+        if ! command -v caddy &> /dev/null
+        then
+            red_echo "caddy 安装失败."
+        else
+            green_echo "caddy 安装成功."
+            mkdir -p caddy
+            mv ./config-auto/caddy/Caddyfile ./caddy/
+            
+            cd caddy
+            nohup caddy run > caddy.log 2>&1 &
+            PID_TO_CHECK=$!
+
+            if ps -p $PID_TO_CHECK > /dev/null
+            then
+                green_echo "caddy 进程在运行中."
+            else
+                red_echo "caddy 启动失败！"
+            fi
+            cd ../
+        fi
     else
         echo "未解析域名, 跳过caddy配置..."
     fi
@@ -441,37 +522,52 @@ rm -rf config-auto
 
 cd GZCTF
 docker compose up -d
+if [ $? -eq 0 ]; then
+    green_echo "GZCTF 启动成功."
+else
+    red_echo "GZCTF 启动失败."
+    exit 1
+fi
 
-echo "============"
-echo "||部署成功!||"
-echo "============"
+green_echo "============"
+green_echo "||部署成功!||"
+green_echo "============"
 
 echo "==============================================================================================================="
 
 if [ "$setup" -eq 2 ]; then
     echo "---------------------------------------------------------------------------------------------------------------"
-    echo "请将 k3s-agent 文件夹中的脚本拷贝到相应的其他节点机器上，并执行 k3s-agent-*.sh"
+    if [ "$hostNum" -eq 0 ]; then
+        green_echo "当前为单机部署, 无需执行节点机器加入脚本"
+    else
+        green_echo "请将 k3s-agent 文件夹中的脚本拷贝到相应的其他节点机器上，并执行 k3s-agent-*.sh"
+    fi
     echo "如有新加机器, 请使用 k3s-agent 文件夹中的 add-agent.sh 脚本添加, 并且请手动添加 <ip> <hostname> 到本机 /etc/hosts 中"
     echo "使用方法: bash add-agent.sh [ip] [hostname]"
     echo "其中 ip 为新加机器的ip地址,  hostname 为新加机器的主机名, 都是必填项"
     echo "主机名必须符合标准：长度在1到255之间，只能包含字母、数字、连字符。且不能与已有主机名重复！！！"
     echo "例如: bash add-agent.sh 10.10.10.10 k3s-agent-example"
+    green_echo "如有需求使用QQ机器人, 可以使用项目: https://github.com/MoRan23/GZCTF-BOT-QQ"
     echo "---------------------------------------------------------------------------------------------------------------"
 fi
 
-echo "GZCTF 相关文件已经保存在当前目录下的 GZCTF 文件夹中"
-echo "Caddy 相关文件已经保存在当前目录下的 caddy 文件夹中"
+green_echo "GZCTF 相关文件已经保存在当前目录下的 GZCTF 文件夹中"
+if [ "$net" -eq 2 ]; then
+    if [ "$select" -eq 1 ]; then
+        green_echo "Caddy 相关文件已经保存在当前目录下的 caddy 文件夹中"
+    fi
+fi
 
 if [ "$net" -eq 2 ]; then
     if [ "$select" -eq 1 ]; then
-        echo "请访问 https://$domain 进行后续配置"
-        echo "或者访问 http://$public_ip:81 进行后续配置"
+        green_echo "请访问 https://$domain 进行后续配置"
+        green_echo "或者访问 http://$public_ip:81 进行后续配置"
     else
-        echo "请访问 http://$public_ip:$gz_port 进行后续配置"
+        green_echo "请访问 http://$public_ip:$gz_port 进行后续配置"
     fi
 else
-    echo "请访问 http://$private_ip:$gz_port 进行后续配置"
+    green_echo "请访问 http://$private_ip:$gz_port 进行后续配置"
 fi
-echo "用户名: admin"
-echo "密码: $adminpasswd"
+green_echo "用户名: admin"
+green_echo "密码: $adminpasswd"
 echo "==============================================================================================================="
